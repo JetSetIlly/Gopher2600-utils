@@ -17,8 +17,8 @@
 // git repository, are also covered by the licence, even when this
 // notice is not present ***
 
-// +build js
-// +build wasm
+//go:build js && wasm
+// +build js,wasm
 
 package main
 
@@ -26,8 +26,10 @@ import (
 	"syscall/js"
 
 	"github.com/jetsetilly/gopher2600/cartridgeloader"
+	"github.com/jetsetilly/gopher2600/emulation"
 	"github.com/jetsetilly/gopher2600/hardware"
 	"github.com/jetsetilly/gopher2600/hardware/riot/ports"
+	"github.com/jetsetilly/gopher2600/hardware/riot/ports/plugging"
 )
 
 func main() {
@@ -66,29 +68,29 @@ func main() {
 			key := data.Get("key").Int()
 			switch key {
 			case 37: // left
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Left, true)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Left, ports.DataStickTrue)
 			case 39: // right
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Right, true)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Right, ports.DataStickTrue)
 			case 38: // up
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Up, true)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Up, ports.DataStickTrue)
 			case 40: // down
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Down, true)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Down, ports.DataStickTrue)
 			case 32: // space
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Fire, true)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Fire, true)
 			}
 		case "keyUp":
 			key := data.Get("key").Int()
 			switch key {
 			case 37: // left
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Left, false)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Left, ports.DataStickFalse)
 			case 39: // right
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Right, false)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Right, ports.DataStickFalse)
 			case 38: // up
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Up, false)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Up, ports.DataStickFalse)
 			case 40: // down
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Down, false)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Down, ports.DataStickFalse)
 			case 32: // space
-				err = vcs.RIOT.Ports.HandleEvent(ports.Player0ID, ports.Fire, false)
+				err = vcs.RIOT.Ports.HandleEvent(plugging.LeftPlayer, ports.Fire, false)
 			}
 		default:
 			js.Global().Get("self").Call("log", args[0].String())
@@ -107,7 +109,7 @@ func main() {
 	worker.Call("addEventListener", "message", messageHandler, false)
 
 	// run emulation
-	vcs.Run(func() error {
-		return nil
+	vcs.Run(func() (emulation.State, error) {
+		return emulation.Running, nil
 	})
 }

@@ -17,8 +17,8 @@
 // git repository, are also covered by the licence, even when this
 // notice is not present ***
 
-// +build js
-// +build wasm
+//go:build js && wasm
+// +build js,wasm
 
 package main
 
@@ -52,7 +52,6 @@ type Canvas struct {
 	frameNum int
 
 	image *image.RGBA
-	done  bool
 }
 
 // NewCanvas is the preferred method of initialisation for the Canvas type
@@ -73,15 +72,11 @@ func NewCanvas(worker js.Value) (*Canvas, error) {
 }
 
 // Resize implements television.PixelRenderer
-func (scr *Canvas) Resize(spec specification.Spec, topScanline, bottomScanline int) error {
-	if scr.done {
-		return nil
-	}
-	scr.done = true
-	scr.spec = spec
-	scr.top = topScanline
-	scr.bottom = bottomScanline
-	scr.height = (bottomScanline - topScanline) * vertScale
+func (scr *Canvas) Resize(frameInfo television.FrameInfo) error {
+	scr.spec = frameInfo.Spec
+	scr.top = frameInfo.VisibleTop
+	scr.bottom = frameInfo.VisibleBottom
+	scr.height = (scr.bottom - scr.top) * vertScale
 
 	// strictly, only the height will ever change on a specification change but
 	// it's convenient to set the width too
@@ -96,16 +91,17 @@ func (scr *Canvas) Resize(spec specification.Spec, topScanline, bottomScanline i
 }
 
 // NewFrame implements television.PixelRenderer
-func (scr *Canvas) NewFrame(isStable bool) error {
+func (scr *Canvas) NewFrame(_ television.FrameInfo) error {
 	scr.frameNum++
+
 	scr.worker.Call("updateDebug", "frameNum", scr.frameNum)
 
 	pixels := js.Global().Get("Uint8Array").New(len(scr.image.Pix))
 	js.CopyBytesToJS(pixels, scr.image.Pix)
 	scr.worker.Call("updateCanvas", pixels)
 
-	// give way to messageHandler - there must be a more elegant way of doing this
-	time.Sleep(25 * time.Millisecond)
+	// give way to messageHandler
+	time.Sleep(5 * time.Millisecond)
 
 	return nil
 }
@@ -121,7 +117,15 @@ func (scr *Canvas) UpdatingPixels(_ bool) {
 }
 
 // SetPixel implements television.PixelRenderer
-func (scr *Canvas) SetPixel(sig signal.SignalAttributes, current bool) error {
+func (scr *Canvas) SetPixels(sig []signal.SignalAttributes, current bool) error {
+	for _, s := range sig {
+		scr.SetPixel(s, current)
+	}
+	return nil
+}
+
+// SetPixel implements television.PixelRenderer
+func (scr *Canvas) SetPixel(sig signal.SignalAttributes, _ bool) error {
 	// we could return immediately but if vblank is on inside the visible
 	// area we need to the set pixel to black, in case the vblank was off
 	// in the previous frame (for efficiency, we're not clearing the pixel

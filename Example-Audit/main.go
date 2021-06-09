@@ -8,6 +8,7 @@ import (
 
 	"github.com/jetsetilly/gopher2600/cartridgeloader"
 	"github.com/jetsetilly/gopher2600/curated"
+	"github.com/jetsetilly/gopher2600/emulation"
 	"github.com/jetsetilly/gopher2600/hardware"
 	"github.com/jetsetilly/gopher2600/hardware/television"
 	"github.com/jetsetilly/gopher2600/hardware/television/signal"
@@ -74,14 +75,14 @@ func main() {
 			}
 
 			// run for 60 frames
-			err = vcs.Run(func() error {
+			err = vcs.Run(func() (emulation.State, error) {
 				fr := tv.GetState(signal.ReqFramenum)
 
 				if fr > 60 {
-					return curated.Errorf("timed out")
+					return emulation.Halt, curated.Errorf("timed out")
 				}
 
-				return nil
+				return emulation.Running, nil
 			})
 
 			// collect any errors
@@ -99,7 +100,7 @@ func main() {
 			// print table row
 			fmt.Printf("%30s | %6s | %4s | %5v | %v\n", name,
 				vcs.Mem.Cart.ID(),
-				tv.GetSpec().ID,
+				tv.GetFrameInfo().Spec.ID,
 				mix.active,
 				errmsg)
 

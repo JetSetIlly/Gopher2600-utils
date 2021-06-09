@@ -9,3 +9,6 @@ Collection of simple utilities using the Gopher2600 engine
 	* Minimal, self-hosting web server
 	* Requires a binary with the name "example.bin" in the `www` directory
 	* Binds to localhost address and listens on port 2600
+* Performance
+	* Runs the emulation unencumbered for 20 seconds
+	* Displays FPS measurement every second and a final average
